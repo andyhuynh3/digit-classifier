@@ -3,15 +3,20 @@ import json
 import os
 from io import BytesIO
 
-from PIL import Image, ImageOps
+from PIL import Image
 
 import numpy as np
 from flask import Flask, render_template, request, url_for
 import tensorflow as tf
 
+tf.compat.v1.enable_eager_execution(
+    config=None,
+    device_policy=None,
+    execution_mode=None
+)
 app = Flask(__name__)
 model = tf.keras.models.load_model('mnistCNN.h5')
-tf.enable_eager_execution()
+
 
 
 @app.route('/')
