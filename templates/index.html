@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">  
+
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous"> 
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+        
+    </head>
+
+    <body>
+        <div class="jumbotron text-center">
+            <h1>Digit Classifier</h1>
+        </div>
+
+        <div class="d-flex justify-content-center">
+            <div>
+                <canvas id="canvas" width="280" height="280"></canvas>
+            </div>
+            <div style="margin: 5px"></div>
+            <div id="result"><p>0</p></div>
+       </div>
+
+        <div class="d-flex justify-content-center">
+            <button onclick="clearCanvas()">Clear</button>
+        </div>
+
+        <div id="chartContainer">
+            <canvas id="chart"></canvas>
+        </div>
+
+       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+       <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+    </body>
+
+</html>
+
+<script>
+    var canvas = document.getElementById("canvas");
+    var ctx = canvas.getContext("2d");
+
+    var mouse = {x: 0, y: 0};
+ 
+    /* Mouse Capturing Work */
+    canvas.addEventListener('mousemove', function(e) {
+    mouse.x = e.pageX - this.offsetLeft;
+    mouse.y = e.pageY - this.offsetTop;
+    }, false);
+
+    /* Drawing on Paint App */
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 8;
+    ctx.color = "black";
+
+    function getColor(colour){ctx.strokeStyle = colour;}
+
+    function getSize(size){ctx.lineWidth = size;}
+    
+    canvas.addEventListener('mousedown', function(e) {
+        ctx.beginPath();
+        ctx.moveTo(mouse.x, mouse.y);
+    
+        canvas.addEventListener('mousemove', onPaint, false);
+    }, false);
+    
+    canvas.addEventListener('mouseup', function() {
+        canvas.removeEventListener('mousemove', onPaint, false);
+        postResults();
+    }, false);
+    
+    var onPaint = function() {
+        ctx.lineTo(mouse.x, mouse.y);
+        ctx.stroke();
+    };
+
+    function updatePrediction(prediction) {
+        $('#result').children('p').text(prediction);
+    }
+
+    function random_rgba() {
+        console.log('hello?');
+        var o = Math.round, r = Math.random, s = 255;
+        return 'rgba(' + o(r()*s) + ',' + o(r()*s) + ',' + o(r()*s) + ',' + r().toFixed(1) + ')';
+    }
+
+    var chartCtx = document.getElementById('chart').getContext('2d');
+    chartCtx.height = 150;
+    chartCtx.width = 150;
+
+    var probabilityChart = new Chart(chartCtx, {
+        type: 'bar',
+        data: {
+            labels: [...Array(10).keys()],
+            datasets: [
+                {
+                    backgroundColor: Array(10).fill(random_rgba()),
+                    data: Array(10).fill(0)
+                }
+            ]
+        },
+        options: {
+            legend: {
+                display: false
+            },
+            // tooltips: {
+            //     enabled: false
+            // },
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                xAxes: [{
+                    gridLines: {
+                        color: "rgba(0, 0, 0, 0)",
+                    },
+                    scaleLabel: {
+                        labelString: 'Number',
+                        display: true
+                    }
+                }],
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        suggestedMax: 120
+                    },
+                    gridLines: {
+                        color: "rgba(0, 0, 0, 0)"
+                    },
+                    scaleLabel: {
+                        labelString: 'Probability (%)',
+                        display: true
+                    }
+                }]
+            },
+            animation: {
+                onComplete: function() {
+                    var chartInstance = this.chart,
+                    ctx = chartInstance.ctx;
+                    ctx.font = Chart.helpers.fontString(Chart.defaults.global.defaultFontSize, Chart.defaults.global.defaultFontStyle, Chart.defaults.global.defaultFontFamily);
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+
+                    this.data.datasets.forEach(function (dataset, i) {
+                        var meta = chartInstance.controller.getDatasetMeta(i);
+                        meta.data.forEach(function (bar, index) {
+                            var data = dataset.data[index];                            
+                            ctx.fillText(data, bar._model.x, bar._model.y - 5);
+                        });
+                    });
+                }
+            }
+        }
+    });
+
+    function updateProbabilityGraph(chart, probabilities) {
+        chart.data.datasets.forEach((dataset) => {
+            dataset.data = [...probabilities];
+            dataset.backgroundColor = Array(10).fill(random_rgba())
+        });
+        chart.update();
+    }
+
+    function postResults() {
+        $.ajax({
+            url: './predict',
+            type: 'POST',
+            data: {img: canvas.toDataURL().replace('data:image/png;base64,','')},
+            success: function(data) {
+                payload = JSON.parse(data);
+                updatePrediction(payload.prediction);
+                probabilities = Object.values(payload.probabilities)
+                updateProbabilityGraph(probabilityChart, probabilities);
+
+            }
+        });
+    }
+
+    function clearCanvas() {
+        ctx.clearRect(0, 0, 280, 280);
+        $('#result').children('p').text('0');
+        updateProbabilityGraph(probabilityChart, Array(10).fill(0));
+	}
+
+</script>
