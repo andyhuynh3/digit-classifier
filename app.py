@@ -7,10 +7,11 @@ from PIL import Image, ImageOps
 
 import numpy as np
 from flask import Flask, render_template, request, url_for
-from tensorflow import keras
+import tensorflow as tf
 
+tf.enable_eager_execution
 app = Flask(__name__)
-model = keras.models.load_model('mnistCNN.h5')
+model = tf.keras.models.load_model('mnistCNN.h5')
 
 
 @app.route('/')
