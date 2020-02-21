@@ -46,7 +46,7 @@ def train_model(epochs=5):
     model.fit(X_train, y_train, epochs=epochs)
     score = model.evaluate(X_test, y_test)
     print(f"{model.metrics_names[1]}: {score[1]*100}")
-    model.save('mnistCNN.h5')
+    model.save('model.h5')
 
 
 if __name__ == '__main__':

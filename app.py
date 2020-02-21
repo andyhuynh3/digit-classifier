@@ -15,13 +15,13 @@ tf.compat.v1.enable_eager_execution(
     execution_mode=None
 )
 app = Flask(__name__)
-model = tf.keras.models.load_model('mnistCNN.h5')
-
+model = tf.keras.models.load_model('model.h5')
 
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -30,11 +30,9 @@ def predict():
             base64.urlsafe_b64decode(request.form['img'])
         )
         posted_image = Image.open(posted_image_bytes)
-        # print(np.array(posted_image, dtype=np.float32))
         posted_image.thumbnail((28, 28))
         posted_image_array = np.array(posted_image, dtype=np.float32) / 255.0
         posted_image_array = posted_image_array[:, :, 3]
-        # print(posted_image_array)
         posted_image_array = posted_image_array.reshape(
             1,
             posted_image_array.shape[0],
@@ -56,12 +54,13 @@ def predict():
 def override_url_for():
     return dict(url_for=dated_url_for)
 
+
 def dated_url_for(endpoint, **values):
     if endpoint == 'static':
         filename = values.get('filename', None)
         if filename:
             file_path = os.path.join(app.root_path,
-                                 endpoint, filename)
+                                     endpoint, filename)
             values['q'] = int(os.stat(file_path).st_mtime)
     return url_for(endpoint, **values)
 
